@@ -1,0 +1,231 @@
+4/19
+sudo yum install -y https://s3.us-west-2.amazonaws.com/amazon-ssm-us-west-2/latest/linux_amd64/amazon-ssm-agent.rpm
+sudo systemctl status amazon-ssm-agent
+
+3/20  Region Oregon  US-west-2
+/home/ec2-user/aws-kube-codesuite/Codesuite-Demo/
+-git add . && git commit -m "test CodeSuite" && git push origin master
+
+use-case1 Result: http://a313801ace6c2408dbf55b276ccc3096-1898650892.us-west-2.elb.amazonaws.com/
+use-case2 Result: RESULT http://ec2-52-33-135-86.us-west-2.compute.amazonaws.com/
+
+Region N Virginia us-east-1
+eksctl create cluster -f managed-cluster.yaml  - Graviton(m6g.large) | spot (m5.xlarge)
+kubectl get nodes -o wide
+kubectl get svc --all-namespaces
+http://a5e4b6b9ebf45449699d0c4b1d6d5992-1814037847.us-east-1.elb.amazonaws.com/
+eksctl delete cluster --name=managed-cluster
+----
+3/15
+https://aws.amazon.com/blogs/devops/continuous-deployment-to-kubernetes-using-aws-codepipeline-aws-codecommit-aws-codebuild-amazon-ecr-and-aws-lambda/
+
+https://github.com/aws-samples/aws-kube-codesuite   - usha used this.
+arn:aws:iam::601716072471:role/eksadminup
+
+cp aws-kube-codesuite/sample-app/* codesuite-demo/
+apiVersion: apps/v1 #extensions/v1beta1  for versions before 1.6.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: codesuite-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-world 
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+      - name: hello
+        image: nginx
+        ports:
+        - containerPort: 80
+---
+Lamda role arn: arn:aws:iam::601716072471:role/Codesuite-Demo-Pipeline-1TA-CodePipelineLambdaRole-1M84K4C32UFG7
+
+--
+new
+data:
+  mapRoles: |
+- rolearn: arn:aws:iam::601716072471:role/eksctl-managed-cluster3-nodegroup-NodeInstanceRole-DD87C8TOVOZ3
+username: system:node:{{EC2PrivateDNSName}}
+groups:
+- system:bootstrappers
+- system:nodes
+    - rolearn: arn:aws:iam::601716072471:role/Codesuite-Demo-Pipeline-1TA-CodePipelineLambdaRole-1M84K4C32UFG7
+username: admin
+groups:
+- system:masters
+
+---
+<usha comment: install credential helper >
+git config --global credential.helper '!aws codecommit credential-helper $@'
+git config --global credential.UseHttpPath true
+
+
+git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/Codesuite-Demo
+git clone <name_of_your_codecommit_repository>
+cp aws-kube-codesuite/sample-app/* codesuite-demo/
+
+/home/ec2-user/aws-kube-codesuite/Codesuite-Demo/
+git add . && git commit -m "test CodeSuite" && git push origin master
+
+--------------------------------------------------------------------------------------------------------
+scp -i upkp.pem -r 02-webapp/ ec2-user@107.22.133.92:/home/ec2-user/
+scp -i upkp.pem managed-cluster.yaml ec2-user@3.92.229.58:/home/ec2-user/
+
+-----
+2/5 
+https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html
+
+1. install CLI
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    sudo ./aws/install
+
+
+2.Install Kubectl
+
+  curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl
+  chmod +x ./kubectl
+  mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+
+  (Optional) Add the $HOME/bin path to your shell initialization file so that it is configured when you open a shell.
+
+  echo 'export PATH=$PATH:$HOME/bin' >> ~/.bash_profile
+  kubectl version --short --client
+
+2.Install EKSctl
+
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+cp /tmp/eksctl ./
+   mkdir -p $HOME/bin && cp ./eksctl $HOME/bin/eksctl && export PATH=$PATH:$HOME/bin
+   eksctl version
+
+--
+Managed nodes linux
+
+
+to create a newkeypair:
+aws ec2 create-key-pair --region us-east-1 --key-name upkp1.pem
+
+Make sure region is set to: us-east-1
+  aws configure 
+
+USE Yaml file below config:
+eksctl create cluster -f managed-cluster.yaml
+----
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+    name: managed-cluster
+    region: us-east-1
+managedNodeGroups:
+    - name: managed-ng
+      minSize: 2
+      maxSize: 3
+      desiredCapacity: 2
+      instanceType: m6g.larg  #for graviton
+      ssh:
+        publicKeyName: upkp1.pem
+      labels: {role: eksadminup}
+      tags:
+        nodegroup-role: eksadminup
+      iam:
+        withAddonPolicies:
+          externalDNS: true
+          certManager: true
+          albIngress: true
+          cloudWatch: true
+availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+--
+# usha for spot add below two lines
+spot: true
+instanceType: m5.xlarge
+--
+
+kubectl get nodes -o wide
+
+eksctl get nodegroup --cluster=managed-cluster-2 [--name=<nodegroupName>]
+eksctl get nodegroup --cluster=managed-cluster-2
+
+--
+DELETE
+kubectl get svc --all-namespaces
+kubectl delete svc <service-name>
+eksctl delete cluster --name=managed-cluster
+aws eks delete-nodegroup --nodegroup-name managed-ng-1 --cluster-name managed-cluster --region us-east-1
+aws eks delete-nodegroup --nodegroup-name managed-ng-1 --cluster-name managed-cluster --region us-east-1
+
+kubectl get nodes -o wide
+
+
+
+--
+Ping Google
+  kubectl run my-shell --rm -i --tty --image ubuntu -- bash
+
+  1 apt-get update
+  2 apt-get install -y iputils-ping
+  3 ping www.google.com
+  4 history
+
+
+
+Deploy app: https://docs.aws.amazon.com/eks/latest/userguide/sample-deployment.html
+
+https://www.fairwinds.com/blog/how-to-deploy-multi-tiered-web-application-with-kubernetes
+
+kubectl create namespace k8s-workshop
+kubectl apply -f 02-webapp/
+
+kubectl get all -n k8s-workshop         - to get pods
+kubectl describe pod codesuite-demo-c97d89678-qrkkq
+kubectl get pods --all-namespaces -o wide
+
+RESULT: http://acca1c3401e594a928c5d3f8534caa57-1993649493.us-west-2.elb.amazonaws.com/
+kubectl delete namespace k8s-workshop
+
+http://a5e4b6b9ebf45449699d0c4b1d6d5992-1814037847.us-east-1.elb.amazonaws.com/
+
+--
+2/10
+CICD Usecase2:
+https://aws.amazon.com/getting-started/projects/set-up-ci-cd-pipeline/
+4stage with build: https://docs.aws.amazon.com/codepipeline/latest/userguide/tutorials-four-stage-pipeline.html
+ServiceRoleARn: arn:aws:iam::601716072471:role/CodeDeployServiceRole
+
+used - https://docs.aws.amazon.com/codepipeline/latest/userguide/tutorials-simple-s3.html
+
+RESULT http://ec2-52-33-135-86.us-west-2.compute.amazonaws.com/
+Try this works -10/10/2021
+--
+2/22 Kubernetes monitoring Dashboard
+https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kubectl proxy
+result: http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+0: kubectl -n kubernetes-dashboard edit svc kubernetes-dashboard
+
+1. kubectl create serviceaccount dashboard -n default
+2. kubectl create clusterrolebinding dashboard-admin -n default --clusterrole=cluster-admin --serviceaccount=
+defalt:dashboard
+3. kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{
+.data.token}" | base64 --decode
+
+RESULT:https://a64610979729f4e699db08ff366b83fe-958795970.us-east-1.elb.amazonaws.com/
+
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6IkkwbnE2TkZpbDFTb2dBa243aXBSbHdmc2g0TDJqeGJuTFlBRkFYZmIwQlkifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRhc2hib2FyZC10b2tlbi1jbjhtdiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJkYXNoYm9hcmQiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI4NmUzNjgwYS1mZjY4LTRkMTYtOWI4YS0zYzJkOGU0NDI2N2IiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6ZGVmYXVsdDpkYXNoYm9hcmQifQ.NBqdYnuMEx6bdKPpcyRPyrcwUuKSDur4jIk4LrNwQAHq6K29DzB5BocAvqTnKhV3lkR7YKc1ymQ_0MGl4UQeWFJ_dHBs__F3intPW1ZAFPa18Uqve8Pxs-L9WcBy9d-EXjXnwwdjrofAW2wRuY2gIcCryP-bHdO-CjXg-E2Qe-dY_WHAxZSwo3-ssqBNC7wTnSKwUQ0PvXzgSar918rshMuOwXf05HKqonxzJJ6Ys0sUtiEFAiu1cTSHZaLM6Oa3rli2GGMA8UH5tZaaS8a40qhvzgsZY_hW6VL_BCpLiMS86t_6Qd3JJQHF9pjwwjyRSJUmfgJP67zD4TOu--asaA
+
+
+https://stackoverflow.com/questions/68775869/support-for-password-authentication-was-removed-please-use-a-personal-access-to
+
+--
+10/16
+used - https://docs.aws.amazon.com/codepipeline/latest/userguide/tutorials-simple-s3.html
+
+
