@@ -25,5 +25,5 @@ The code’s journey from the developer’s workstation to the final user-facing
 Within this Deploy Stage, AWS CodeBuild uses GitHub Actions to install the Helm application on Amazon Elastic Kubernetes Service (EKS), leveraging Helm charts for deployment.
 
 7.The deployed application is now running on Amazon EKS and is accessible via the automatically provisioned Application Load Balancer.
-[
-](https://aws.amazon.com/blogs/devops/simplify-amazon-eks-deployments-with-github-actions-and-aws-codebuild/)
+
+https://aws.amazon.com/blogs/devops/simplify-amazon-eks-deployments-with-github-actions-and-aws-codebuild/
