@@ -55,3 +55,45 @@ kubectl get pods -A
 
 echo "✅ Kubernetes single-node cluster setup complete on Amazon Linux 2023."
 echo "You can now deploy your webapp."
+
+--------
+
+#!/bin/bash
+set -e
+
+echo "Stopping kubelet and containerd..."
+sudo systemctl stop kubelet
+sudo systemctl stop containerd || echo "containerd not running, skipping"
+
+echo "Resetting kubeadm..."
+sudo kubeadm reset -f
+
+echo "Removing leftover CNI configs, manifests, etcd data, and kubeconfig..."
+sudo rm -rf /etc/cni/net.d /etc/kubernetes/manifests /var/lib/etcd $HOME/.kube
+
+echo "Flushing iptables..."
+sudo iptables -F
+sudo iptables -t nat -F
+sudo iptables -t mangle -F
+sudo iptables -X
+
+echo "Starting containerd and kubelet..."
+sudo systemctl start containerd
+sudo systemctl enable containerd
+sudo systemctl start kubelet
+sudo systemctl enable kubelet
+
+echo "Initializing Kubernetes control plane..."
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=all
+
+echo "Setting up kubeconfig for ec2-user..."
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "Applying Flannel CNI..."
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+echo "Kubernetes init complete. Check nodes with:"
+echo "kubectl get nodes --watch"
+
