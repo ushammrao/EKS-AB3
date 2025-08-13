@@ -178,3 +178,5 @@ hello-world-service   LoadBalancer   10.100.128.207   af26ded66766c4da6909fa52a5
 http://af26ded66766c4da6909fa52a5d958e1-699479441.us-east-1.elb.amazonaws.com/
 o/p Usha Rao, this is  from EKS, created for Wiz Demo on 8/13/2025!
 
+eksctl delete cluster --name hello-world-cluster --region us-east-1
+
