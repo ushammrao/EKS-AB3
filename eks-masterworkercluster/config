@@ -148,3 +148,33 @@ bash
 Copy
 Edit
 eksctl delete cluster --name hello-world-cluster
+
+---
+ouput
+2025-08-13 23:13:32 [ℹ]  waiting for the control plane to become ready
+2025-08-13 23:13:33 [✔]  saved kubeconfig as "/home/ec2-user/.kube/config"
+2025-08-13 23:13:33 [ℹ]  no tasks
+2025-08-13 23:13:33 [✔]  all EKS cluster resources for "hello-world-cluster" have been created
+2025-08-13 23:13:33 [ℹ]  nodegroup "worker-ng" has 1 node(s)
+2025-08-13 23:13:33 [ℹ]  node "ip-192-168-20-89.ec2.internal" is ready
+2025-08-13 23:13:33 [ℹ]  waiting for at least 1 node(s) to become ready in "worker-ng"
+2025-08-13 23:13:33 [ℹ]  nodegroup "worker-ng" has 1 node(s)
+2025-08-13 23:13:33 [ℹ]  node "ip-192-168-20-89.ec2.internal" is ready
+2025-08-13 23:13:33 [✔]  created 1 managed nodegroup(s) in cluster "hello-world-cluster"
+2025-08-13 23:13:34 [ℹ]  kubectl command should work with "/home/ec2-user/.kube/config", try 'kubectl get nodes'
+2025-08-13 23:13:34 [✔]  EKS cluster "hello-world-cluster" in "us-east-1" region is ready
+[ec2-user@ip-172-31-41-14 ~]$ kubectl get nodes
+NAME                            STATUS   ROLES    AGE     VERSION
+ip-192-168-20-89.ec2.internal   Ready    <none>   2m51s   v1.29.15-eks-3abbec1
+
+[ec2-user@ip-172-31-41-14 ~]$ kubectl get pods
+NAME                           READY   STATUS    RESTARTS   AGE
+hello-world-64789997b4-skwch   1/1     Running   0          9s
+
+[ec2-user@ip-172-31-41-14 ~]$ kubectl get svc hello-world-service
+NAME                  TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)        AGE
+hello-world-service   LoadBalancer   10.100.128.207   af26ded66766c4da6909fa52a5d958e1-699479441.us-east-1.elb.amazonaws.com   80:31486/TCP   63s
+
+http://af26ded66766c4da6909fa52a5d958e1-699479441.us-east-1.elb.amazonaws.com/
+o/p Usha Rao, this is  from EKS, created for Wiz Demo on 8/13/2025!
+
