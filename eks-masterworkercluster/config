@@ -1,0 +1,150 @@
+# Remove the wrong file
+sudo rm -f /usr/local/bin/kubectl
+
+# Get the latest stable kubectl version from Google (Kubernetes upstream)
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+# Make it executable
+chmod +x kubectl
+
+# Move it into PATH
+sudo mv kubectl /usr/local/bin/
+
+# Verify
+kubectl version --client
+
+
+  1️⃣ Prerequisites
+On your EC2 instance (this will be your management box):
+
+bash
+Copy
+Edit
+# Update packages
+sudo yum update -y
+
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+aws --version
+
+# Install eksctl
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz"
+tar -xzf eksctl_$(uname -s)_amd64.tar.gz
+sudo mv eksctl /usr/local/bin
+eksctl version
+
+# Install kubectl
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/$(aws eks describe-addon-versions --addon-name kube-proxy --query 'addons[].addonVersions[].addonVersion' --output text | head -n 1)/2022-06-29/bin/linux/amd64/kubectl
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin
+kubectl version --client
+Also configure AWS CLI with your credentials:
+
+bash
+Copy
+Edit
+aws configure
+2️⃣ Create EKS Cluster Configuration
+Create a file called eks-cluster.yaml:
+
+yaml
+Copy
+Edit
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: hello-world-cluster
+  region: us-west-2
+  version: "1.29"
+
+managedNodeGroups:
+  - name: worker-ng
+    instanceType: t3.medium
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+    ssh:
+      allow: true
+      publicKeyName: my-ec2-keypair  # Replace with your EC2 key pair name
+3️⃣ Create EKS Cluster
+Run:
+
+bash
+Copy
+Edit
+eksctl create cluster -f eks-cluster.yaml
+This will:
+
+Provision an AWS-managed control plane (master nodes — you don’t pay for these EC2s).
+
+Create 1 managed worker node (EC2) in a node group.
+
+Configure your kubeconfig automatically for kubectl.
+
+4️⃣ Verify Cluster
+bash
+Copy
+Edit
+kubectl get nodes
+You should see 1 Ready worker node.
+
+5️⃣ Deploy Hello World App
+Create a file hello-world.yaml:
+
+yaml
+Copy
+Edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+      - name: hello-world
+        image: hashicorp/http-echo
+        args:
+        - "-text=Hello, World from EKS!"
+        ports:
+        - containerPort: 5678
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 5678
+  selector:
+    app: hello-world
+6️⃣ Deploy and Access
+bash
+Copy
+Edit
+kubectl apply -f hello-world.yaml
+kubectl get pods
+kubectl get svc hello-world-service
+Wait until the EXTERNAL-IP is assigned, then open it in your browser:
+
+cpp
+Copy
+Edit
+http://<EXTERNAL-IP>
+7️⃣ Cleanup
+bash
+Copy
+Edit
+eksctl delete cluster --name hello-world-cluster
